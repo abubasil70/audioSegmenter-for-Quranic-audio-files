@@ -2,7 +2,7 @@ import sys
 import os
 from pydub import AudioSegment
 
-# أبو باسل: الكود الآن يبحث عن المحرك بجانبه مباشرة
+# I have the three files of FFmpeg lib in the same directory. 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 ffmpeg_exe = os.path.join(current_dir, "ffmpeg.exe")
