@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ar">
+
+<head>
+<meta charset="UTF-8">
+<title>مسجل التوقيتات</title>
+
+<style>
+body{
+    font-family: tahoma;
+    margin: 20px;
+}
+
+button, input{
+    font-size: 18px;
+    margin: 5px;
+}
+
+textarea{
+    width: 100%;
+    height: 300px;
+    font-size: 18px;
+}
+
+#urlInput{
+    width: 60%;
+}
+</style>
+
+</head>
+
+<body>
+
+<h2>مسجل توقيتات الصوت</h2>
+
+<input type="text" id="urlInput" placeholder="أدخل رابط الملف الصوتي هنا...">
+<button id="loadBtn">تحميل</button>
+<button id="mark">تسجيل التوقيت</button>
+
+<audio id="audio" controls style="width:100%;"></audio>
+
+<br><br>
+<div style="display:flex;gap:10px;">
+<textarea id="times" style="flex:0.5;height:500px;"></textarea>
+<textarea id="surahText" readonly style="flex:1.5;height:500px;direction:rtl;"></textarea>
+</div>
+
+<script>
+
+const audio    = document.getElementById("audio");
+const textarea = document.getElementById("times");
+const mark     = document.getElementById("mark");
+const urlInput = document.getElementById("urlInput");
+const loadBtn  = document.getElementById("loadBtn");
+
+let audioFileName  = "";
+let previousTimeInMs = 0;
+let verseCounter   = 1;
+let surahLines     = [];
+
+// استخراج اسم الملف بدون امتداد من الرابط
+function extractFileName(url){
+    try {
+        const path = new URL(url).pathname;          // مثال: /audio/001.mp3
+        const base = path.substring(path.lastIndexOf('/') + 1);  // 001.mp3
+        return base.substring(0, base.lastIndexOf('.')) || base;  // 001
+    } catch(e) {
+        return url;
+    }
+}
+
+loadBtn.onclick = function(){
+    const url = urlInput.value.trim();
+    if (!url) return;
+
+    audioFileName = extractFileName(url);
+
+    const surahNo = parseInt(audioFileName, 10);
+    loadSurah(surahNo);
+
+    audio.src = url;
+
+    previousTimeInMs = 0;
+    verseCounter     = 1;
+    textarea.value   = "";
+
+    audio.play();
+}
+
+mark.onclick = function(){
+    if(audio.paused)
+        return;
+
+    let currentTimeInMs = Math.round(audio.currentTime * 1000);
+
+    if (currentTimeInMs === previousTimeInMs && verseCounter > 1)
+        return;
+
+    let formattedVerse = verseCounter.toString().padStart(3, "0");
+
+    let line = `${audioFileName}:${formattedVerse} | ${previousTimeInMs} -> ${currentTimeInMs} ms\n`;
+
+    textarea.value += line;
+
+    previousTimeInMs = currentTimeInMs;
+    verseCounter++;
+
+    // حذف أول سطر من مصفوفة السورة وتحديث العرض
+    if (surahLines.length > 0) {
+        surahLines.shift();
+        document.getElementById("surahText").value = surahLines.join("\n");
+    }
+}
+
+async function loadSurah(surahNo){
+    try {
+        const response = await fetch('file.txt');
+        const txt      = await response.text();
+        const lines    = txt.split(/\r?\n/);
+        surahLines     = [];
+        for (const line of lines) {
+            if (!line.trim()) continue;
+            const p = line.split("|");
+            if (parseInt(p[0], 10) === surahNo) surahLines.push(line);
+            else if (surahLines.length) break;
+        }
+        document.getElementById("surahText").value = surahLines.join("\n");
+    } catch(e) { console.error(e); }
+}
+
+</script>
+
+</body>
+</html>
